@@ -1,0 +1,41 @@
+# @package _global_
+
+# example hyperparameter optimization of some experiment with Optuna:
+# python train.py -m hparams_search=optuna experiment=example
+
+defaults:
+  - override /hydra/sweeper: optuna
+
+# choose metric which will be optimized by Optuna
+# make sure this is the correct name of some metric logged in lightning module!
+optimized_metric: "val/loss_best"
+
+# here we define Optuna hyperparameter search
+# it optimizes for value returned from function with @hydra.main decorator
+# docs: https://hydra.cc/docs/next/plugins/optuna_sweeper
+hydra:
+  mode: MULTIRUN # mandatory mode to run hyperparameter search
+  sweeper:
+    _target_: hydra._internal.core_plugins.basic_sweeper.BasicSweeper
+    max_jobs: 4
+    direction: minimize
+    study_name: optuna_study
+    storage: null
+    n_trials: 20
+    n_jobs: 1
+
+    # choose Optuna hyperparameter sampler
+    # you can choose bayesian sampler (tpe), random search (without optimization), grid sampler, etc.
+    # docs: https://optuna.readthedocs.io/en/stable/reference/samplers.html
+    sampler:
+      _target_: optuna.samplers.TPESampler
+      seed: 1234
+      n_startup_trials: 10 # number of random sampling runs before optimization starts
+
+    # define hyperparameter search space
+    params:
+      model.optimizer.lr: choice(0.01, 0.005, 0.001, 0.0005)
+      data.batch_size: choice(32, 64, 128, 256)
+      model.net.hidden_size: choice(64, 128, 256, 512)
+      model.net.num_layers: choice(1, 2, 3, 4)
+      trainer.max_steps: choice(5000, 10000, 20000, 50000)
